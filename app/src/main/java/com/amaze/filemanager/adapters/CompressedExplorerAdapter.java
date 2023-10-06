@@ -23,7 +23,6 @@ package com.amaze.filemanager.adapters;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.amaze.filemanager.GlideApp;
 import com.amaze.filemanager.R;
 import com.amaze.filemanager.adapters.data.CompressedObjectParcelable;
 import com.amaze.filemanager.adapters.holders.CompressedItemViewHolder;

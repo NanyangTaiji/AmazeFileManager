@@ -33,7 +33,7 @@ import android.graphics.drawable.Drawable;
 
 /** Ensures that Glide's generated API is created for the Gallery sample. */
 @GlideModule
-public class AmazeFileManagerModule extends AppGlideModule {
+public class GlideApp extends AppGlideModule {
   @Override
   public void registerComponents(Context context, Glide glide, Registry registry) {
     registry.prepend(String.class, Drawable.class, new ApkImageModelLoaderFactory(context));

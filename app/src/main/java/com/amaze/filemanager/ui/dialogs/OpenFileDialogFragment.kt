@@ -34,7 +34,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.amaze.filemanager.GlideApp
+//import com.amaze.filemanager.GlideApp
 import com.amaze.filemanager.R
 import com.amaze.filemanager.adapters.AppsRecyclerAdapter
 import com.amaze.filemanager.adapters.data.AppDataParcelable
@@ -95,11 +95,11 @@ class OpenFileDialogFragment : BaseBottomSheetFragment(), AdjustListViewForTv<Ap
             if (mimeType == MimeTypes.ALL_MIME_TYPES ||
                 forceChooser ||
                 !getPreferenceAndStartActivity(
-                        uri,
-                        mimeType,
-                        useNewStack,
-                        activity
-                    )
+                    uri,
+                    mimeType,
+                    useNewStack,
+                    activity
+                )
             ) {
                 if (forceChooser) {
                     clearMimeTypePreference(
@@ -116,7 +116,7 @@ class OpenFileDialogFragment : BaseBottomSheetFragment(), AdjustListViewForTv<Ap
         }
 
         private fun newInstance(uri: Uri, mimeType: String, useNewStack: Boolean):
-            OpenFileDialogFragment {
+                OpenFileDialogFragment {
             val args = Bundle()
 
             val fragment = OpenFileDialogFragment()
@@ -154,11 +154,11 @@ class OpenFileDialogFragment : BaseBottomSheetFragment(), AdjustListViewForTv<Ap
             chooserIntent.setDataAndType(uri, mimeType)
 
             for (
-                resolveInfo in context.packageManager
-                    .queryIntentActivities(
-                        chooserIntent,
-                        PackageManager.MATCH_DEFAULT_ONLY
-                    )
+            resolveInfo in context.packageManager
+                .queryIntentActivities(
+                    chooserIntent,
+                    PackageManager.MATCH_DEFAULT_ONLY
+                )
             ) context.grantUriPermission(
                 resolveInfo.activityInfo.packageName,
                 uri,
@@ -171,7 +171,7 @@ class OpenFileDialogFragment : BaseBottomSheetFragment(), AdjustListViewForTv<Ap
                 } else {
                     chooserIntent.addFlags(
                         Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                            or Intent.FLAG_ACTIVITY_TASK_ON_HOME
+                                or Intent.FLAG_ACTIVITY_TASK_ON_HOME
                     )
                 }
             }
@@ -310,12 +310,14 @@ class OpenFileDialogFragment : BaseBottomSheetFragment(), AdjustListViewForTv<Ap
 
         val modelProvider = AppsAdapterPreloadModel(this, true)
         val sizeProvider = ViewPreloadSizeProvider<String>()
-        var preloader = RecyclerViewPreloader(
+        //TODO NY GlideApp not defined
+       /* var preloader = RecyclerViewPreloader(
             GlideApp.with(this),
             modelProvider,
             sizeProvider,
             GlideConstants.MAX_PRELOAD_FILES
         )
+        */
         sharedPreferences = PreferenceManager.getDefaultSharedPreferences(requireContext())
 
         val intent = buildIntent(
@@ -343,8 +345,8 @@ class OpenFileDialogFragment : BaseBottomSheetFragment(), AdjustListViewForTv<Ap
             appDataParcelableList
         )
         loadViews(lastAppData)
-
-        viewBinding.appsRecyclerView.addOnScrollListener(preloader)
+      //TODO nY
+      //  viewBinding.appsRecyclerView.addOnScrollListener(preloader)
     }
 
     override fun onPause() {

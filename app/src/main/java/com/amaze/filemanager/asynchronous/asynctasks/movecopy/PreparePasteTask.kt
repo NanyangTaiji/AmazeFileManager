@@ -28,15 +28,16 @@ import androidx.appcompat.widget.AppCompatCheckBox
 import com.afollestad.materialdialogs.DialogAction
 import com.afollestad.materialdialogs.MaterialDialog
 import com.amaze.filemanager.R
-import com.amaze.filemanager.asynchronous.asynctasks.fromTask
+import com.amaze.filemanager.asynchronous.asynctasks.Task.fromTask
 import com.amaze.filemanager.asynchronous.management.ServiceWatcherUtil
 import com.amaze.filemanager.asynchronous.services.CopyService
 import com.amaze.filemanager.databinding.CopyDialogBinding
-import com.amaze.filemanager.fileoperations.filesystem.CAN_CREATE_FILES
-import com.amaze.filemanager.fileoperations.filesystem.COPY
+
 import com.amaze.filemanager.fileoperations.filesystem.FolderState
-import com.amaze.filemanager.fileoperations.filesystem.MOVE
+import com.amaze.filemanager.fileoperations.filesystem.FolderState.CAN_CREATE_FILES
 import com.amaze.filemanager.fileoperations.filesystem.OpenMode
+import com.amaze.filemanager.fileoperations.filesystem.OperationType.COPY
+import com.amaze.filemanager.fileoperations.filesystem.OperationType.MOVE
 import com.amaze.filemanager.filesystem.FilenameHelper
 import com.amaze.filemanager.filesystem.HybridFile
 import com.amaze.filemanager.filesystem.HybridFileParcelable
@@ -336,7 +337,7 @@ class PreparePasteTask(strongRefMain: MainActivity) {
             index++
         }
         if (filesToCopyPerFolder.isNotEmpty()) {
-            @FolderState
+            @FolderState.State
             val mode: Int = context.get()?.mainActivityHelper!!
                 .checkFolder(targetPath, openMode, context.get())
             if (mode == CAN_CREATE_FILES && !targetPath.contains("otg:/")) {

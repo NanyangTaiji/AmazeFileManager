@@ -24,8 +24,8 @@ import android.content.Context
 import android.net.Uri
 import android.text.TextUtils
 import com.amaze.filemanager.application.AppConfig
-import com.amaze.filemanager.fileoperations.filesystem.DOESNT_EXIST
-import com.amaze.filemanager.fileoperations.filesystem.WRITABLE_ON_REMOTE
+import com.amaze.filemanager.fileoperations.filesystem.FolderState.DOESNT_EXIST
+import com.amaze.filemanager.fileoperations.filesystem.FolderState.WRITABLE_ON_REMOTE
 import com.amaze.filemanager.filesystem.ftp.NetCopyConnectionInfo
 import com.amaze.filemanager.filesystem.ftp.NetCopyConnectionInfo.Companion.AT
 import com.amaze.filemanager.filesystem.ftp.NetCopyConnectionInfo.Companion.COLON

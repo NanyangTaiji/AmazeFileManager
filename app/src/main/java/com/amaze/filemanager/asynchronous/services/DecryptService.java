@@ -32,7 +32,6 @@ import org.slf4j.LoggerFactory;
 import com.amaze.filemanager.R;
 import com.amaze.filemanager.application.AppConfig;
 import com.amaze.filemanager.asynchronous.asynctasks.Task;
-import com.amaze.filemanager.asynchronous.asynctasks.TaskKt;
 import com.amaze.filemanager.asynchronous.management.ServiceWatcherUtil;
 import com.amaze.filemanager.filesystem.FileProperties;
 import com.amaze.filemanager.filesystem.HybridFile;
@@ -155,7 +154,7 @@ public class DecryptService extends AbstractProgressiveService {
 
     super.onStartCommand(intent, flags, startId);
     super.progressHalted();
-    TaskKt.fromTask(new BackgroundTask());
+    Task.fromTask(new BackgroundTask());
 
     return START_NOT_STICKY;
   }

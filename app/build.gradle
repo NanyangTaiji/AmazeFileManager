@@ -68,10 +68,6 @@ android {
     flavorDimensions 'static'
 
     productFlavors {
-        fdroid {
-            dimension 'static'
-            buildConfigField "boolean", "IS_VERSION_FDROID", "true"
-        }
 
         play {
             dimension 'static'

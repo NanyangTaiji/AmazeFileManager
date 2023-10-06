@@ -20,15 +20,15 @@
 
 package com.amaze.filemanager.utils;
 
-import static com.amaze.filemanager.fileoperations.filesystem.FolderStateKt.CAN_CREATE_FILES;
-import static com.amaze.filemanager.fileoperations.filesystem.FolderStateKt.DOESNT_EXIST;
-import static com.amaze.filemanager.fileoperations.filesystem.FolderStateKt.WRITABLE_OR_ON_SDCARD;
-import static com.amaze.filemanager.fileoperations.filesystem.OperationTypeKt.COMPRESS;
-import static com.amaze.filemanager.fileoperations.filesystem.OperationTypeKt.DELETE;
-import static com.amaze.filemanager.fileoperations.filesystem.OperationTypeKt.EXTRACT;
-import static com.amaze.filemanager.fileoperations.filesystem.OperationTypeKt.NEW_FILE;
-import static com.amaze.filemanager.fileoperations.filesystem.OperationTypeKt.NEW_FOLDER;
-import static com.amaze.filemanager.fileoperations.filesystem.OperationTypeKt.RENAME;
+import static com.amaze.filemanager.fileoperations.filesystem.FolderState.CAN_CREATE_FILES;
+import static com.amaze.filemanager.fileoperations.filesystem.FolderState.DOESNT_EXIST;
+import static com.amaze.filemanager.fileoperations.filesystem.FolderState.WRITABLE_OR_ON_SDCARD;
+import static com.amaze.filemanager.fileoperations.filesystem.OperationType.COMPRESS;
+import static com.amaze.filemanager.fileoperations.filesystem.OperationType.DELETE;
+import static com.amaze.filemanager.fileoperations.filesystem.OperationType.EXTRACT;
+import static com.amaze.filemanager.fileoperations.filesystem.OperationType.NEW_FILE;
+import static com.amaze.filemanager.fileoperations.filesystem.OperationType.NEW_FOLDER;
+import static com.amaze.filemanager.fileoperations.filesystem.OperationType.RENAME;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -446,11 +446,11 @@ public class MainActivityHelper {
         });
   }
 
-  public @FolderState int checkFolder(final @NonNull File folder, Context context) {
+  public @FolderState.State int checkFolder(final @NonNull File folder, Context context) {
     return checkFolder(folder.getAbsolutePath(), OpenMode.FILE, context);
   }
 
-  public @FolderState int checkFolder(final String path, OpenMode openMode, Context context) {
+  public @FolderState.State int checkFolder(final String path, OpenMode openMode, Context context) {
     if (OpenMode.SMB.equals(openMode)) {
       return SmbUtil.checkFolder(path);
     } else if (OpenMode.SFTP.equals(openMode) || OpenMode.FTP.equals(openMode)) {
@@ -685,7 +685,7 @@ public class MainActivityHelper {
       new DeleteTask(mainActivity).execute(files);
       return;
     }
-    @FolderState
+    @FolderState.State
     int mode =
         checkFolder(files.get(0).getParent(mainActivity), files.get(0).getMode(), mainActivity);
     if (mode == CAN_CREATE_FILES) {
@@ -704,7 +704,7 @@ public class MainActivityHelper {
       return;
     }
 
-    @FolderState int mode = checkFolder(parent, mainActivity);
+    @FolderState.State int mode = checkFolder(parent, mainActivity);
     switch (mode) {
       case WRITABLE_OR_ON_SDCARD:
         Decompressor decompressor = CompressedHelper.getCompressorInstance(mainActivity, file);

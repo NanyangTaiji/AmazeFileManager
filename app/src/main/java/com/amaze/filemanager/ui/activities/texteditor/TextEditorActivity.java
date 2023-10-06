@@ -34,7 +34,7 @@ import java.util.TimerTask;
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.amaze.filemanager.R;
 import com.amaze.filemanager.asynchronous.asynctasks.SearchTextTask;
-import com.amaze.filemanager.asynchronous.asynctasks.TaskKt;
+import com.amaze.filemanager.asynchronous.asynctasks.Task;
 import com.amaze.filemanager.asynchronous.asynctasks.texteditor.read.ReadTextFileTask;
 import com.amaze.filemanager.asynchronous.asynctasks.texteditor.write.WriteTextFileTask;
 import com.amaze.filemanager.fileoperations.filesystem.OpenMode;
@@ -226,7 +226,7 @@ public class TextEditorActivity extends ThemedActivity
     final WeakReference<Context> appContextWR =
         new WeakReference<>(activity.getApplicationContext());
 
-    TaskKt.fromTask(
+    Task.fromTask(
         new WriteTextFileTask(activity, editTextString, textEditorActivityWR, appContextWR));
   }
 
@@ -244,7 +244,7 @@ public class TextEditorActivity extends ThemedActivity
     final WeakReference<Context> appContextWR =
         new WeakReference<>(activity.getApplicationContext());
 
-    TaskKt.fromTask(new ReadTextFileTask(activity, textEditorActivityWR, appContextWR));
+    Task.fromTask(new ReadTextFileTask(activity, textEditorActivityWR, appContextWR));
   }
 
   public void setReadOnly() {

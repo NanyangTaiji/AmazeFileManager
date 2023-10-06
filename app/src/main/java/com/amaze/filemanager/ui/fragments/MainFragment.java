@@ -48,7 +48,7 @@ import com.amaze.filemanager.adapters.holders.ItemViewHolder;
 import com.amaze.filemanager.application.AppConfig;
 import com.amaze.filemanager.asynchronous.asynctasks.DeleteTask;
 import com.amaze.filemanager.asynchronous.asynctasks.LoadFilesListTask;
-import com.amaze.filemanager.asynchronous.asynctasks.TaskKt;
+import com.amaze.filemanager.asynchronous.asynctasks.Task;
 import com.amaze.filemanager.asynchronous.asynctasks.searchfilesystem.SortSearchResultTask;
 import com.amaze.filemanager.asynchronous.handlers.FileHandler;
 import com.amaze.filemanager.database.SortHandler;
@@ -1490,7 +1490,7 @@ public class MainFragment extends Fragment
       // no results were found
       mainFragmentViewModel.getListElements().clear();
     }
-    TaskKt.fromTask(
+    Task.fromTask(
         new SortSearchResultTask(
             elements,
             new FileListSorter(

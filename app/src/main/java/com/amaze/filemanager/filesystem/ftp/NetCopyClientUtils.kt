@@ -23,9 +23,9 @@ package com.amaze.filemanager.filesystem.ftp
 import androidx.annotation.VisibleForTesting
 import androidx.annotation.WorkerThread
 import com.amaze.filemanager.application.AppConfig
-import com.amaze.filemanager.fileoperations.filesystem.DOESNT_EXIST
 import com.amaze.filemanager.fileoperations.filesystem.FolderState
-import com.amaze.filemanager.fileoperations.filesystem.WRITABLE_ON_REMOTE
+import com.amaze.filemanager.fileoperations.filesystem.FolderState.DOESNT_EXIST
+import com.amaze.filemanager.fileoperations.filesystem.FolderState.WRITABLE_ON_REMOTE
 import com.amaze.filemanager.filesystem.ftp.NetCopyClientConnectionPool.FTPS_DEFAULT_PORT
 import com.amaze.filemanager.filesystem.ftp.NetCopyClientConnectionPool.FTPS_URI_PREFIX
 import com.amaze.filemanager.filesystem.ftp.NetCopyClientConnectionPool.FTP_DEFAULT_PORT
@@ -256,11 +256,11 @@ object NetCopyClientUtils {
     /**
      * Check folder existence on remote.
      */
-    @FolderState
+    @FolderState.State
     fun checkFolder(path: String): Int {
         val template: NetCopyClientTemplate<*, Int> = if (path.startsWith(SSH_URI_PREFIX)) {
             object : SFtpClientTemplate<Int>(extractBaseUriFrom(path), false) {
-                @FolderState
+                @FolderState.State
                 @Throws(IOException::class)
                 override fun execute(client: SFTPClient): Int {
                     return if (client.statExistence(extractRemotePathFrom(path)) == null) {

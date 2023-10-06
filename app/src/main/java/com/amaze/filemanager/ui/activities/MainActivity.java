@@ -27,17 +27,17 @@ import static android.os.Build.VERSION_CODES.KITKAT_WATCH;
 import static android.os.Build.VERSION_CODES.LOLLIPOP;
 import static android.os.Build.VERSION_CODES.M;
 import static android.os.Build.VERSION_CODES.N;
-import static com.amaze.filemanager.fileoperations.filesystem.FolderStateKt.WRITABLE_OR_ON_SDCARD;
-import static com.amaze.filemanager.fileoperations.filesystem.OperationTypeKt.COMPRESS;
-import static com.amaze.filemanager.fileoperations.filesystem.OperationTypeKt.COPY;
-import static com.amaze.filemanager.fileoperations.filesystem.OperationTypeKt.DELETE;
-import static com.amaze.filemanager.fileoperations.filesystem.OperationTypeKt.EXTRACT;
-import static com.amaze.filemanager.fileoperations.filesystem.OperationTypeKt.MOVE;
-import static com.amaze.filemanager.fileoperations.filesystem.OperationTypeKt.NEW_FILE;
-import static com.amaze.filemanager.fileoperations.filesystem.OperationTypeKt.NEW_FOLDER;
-import static com.amaze.filemanager.fileoperations.filesystem.OperationTypeKt.RENAME;
-import static com.amaze.filemanager.fileoperations.filesystem.OperationTypeKt.SAVE_FILE;
-import static com.amaze.filemanager.fileoperations.filesystem.OperationTypeKt.UNDEFINED;
+import static com.amaze.filemanager.fileoperations.filesystem.FolderState.WRITABLE_OR_ON_SDCARD;
+import static com.amaze.filemanager.fileoperations.filesystem.OperationType.COMPRESS;
+import static com.amaze.filemanager.fileoperations.filesystem.OperationType.COPY;
+import static com.amaze.filemanager.fileoperations.filesystem.OperationType.DELETE;
+import static com.amaze.filemanager.fileoperations.filesystem.OperationType.EXTRACT;
+import static com.amaze.filemanager.fileoperations.filesystem.OperationType.MOVE;
+import static com.amaze.filemanager.fileoperations.filesystem.OperationType.NEW_FILE;
+import static com.amaze.filemanager.fileoperations.filesystem.OperationType.NEW_FOLDER;
+import static com.amaze.filemanager.fileoperations.filesystem.OperationType.RENAME;
+import static com.amaze.filemanager.fileoperations.filesystem.OperationType.SAVE_FILE;
+import static com.amaze.filemanager.fileoperations.filesystem.OperationType.UNDEFINED;
 import static com.amaze.filemanager.ui.dialogs.SftpConnectDialog.ARG_ADDRESS;
 import static com.amaze.filemanager.ui.dialogs.SftpConnectDialog.ARG_DEFAULT_PATH;
 import static com.amaze.filemanager.ui.dialogs.SftpConnectDialog.ARG_EDIT;
@@ -76,7 +76,7 @@ import com.amaze.filemanager.application.AppConfig;
 import com.amaze.filemanager.asynchronous.SaveOnDataUtilsChange;
 import com.amaze.filemanager.asynchronous.asynctasks.CloudLoaderAsyncTask;
 import com.amaze.filemanager.asynchronous.asynctasks.DeleteTask;
-import com.amaze.filemanager.asynchronous.asynctasks.TaskKt;
+import com.amaze.filemanager.asynchronous.asynctasks.Task;
 import com.amaze.filemanager.asynchronous.asynctasks.movecopy.MoveFilesTask;
 import com.amaze.filemanager.asynchronous.management.ServiceWatcherUtil;
 import com.amaze.filemanager.asynchronous.services.CopyService;
@@ -1602,7 +1602,7 @@ public class MainActivity extends PermissionsActivity
                   oppathe = "";
                 }
 
-                TaskKt.fromTask(
+                Task.fromTask(
                     new MoveFilesTask(
                         oparrayListList,
                         isRootExplorer(),

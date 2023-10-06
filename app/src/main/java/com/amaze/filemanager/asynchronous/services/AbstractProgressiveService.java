@@ -292,7 +292,7 @@ public abstract class AbstractProgressiveService extends Service
   /**
    * Returns the {@link #getDataPackages()} list which contains data to be transferred to {@link
    * ProcessViewerFragment} Method call is synchronized so as to avoid modifying the list by {@link
-   * ServiceWatcherUtil#handlerThread} while {@link MainActivity#runOnUiThread(Runnable)} is
+   * ServiceWatcherUtil//handlerThread} while {@link MainActivity#runOnUiThread(Runnable)} is
    * executing the callbacks in {@link ProcessViewerFragment}
    */
   public final synchronized DatapointParcelable getDataPackage(int index) {
@@ -305,7 +305,7 @@ public abstract class AbstractProgressiveService extends Service
 
   /**
    * Puts a {@link DatapointParcelable} into a list Method call is synchronized so as to avoid
-   * modifying the list by {@link ServiceWatcherUtil#handlerThread} while {@link
+   * modifying the list by {@link ServiceWatcherUtil//handlerThread} while {@link
    * MainActivity#runOnUiThread(Runnable)} is executing the callbacks in {@link
    * ProcessViewerFragment}
    */
@@ -393,7 +393,7 @@ public abstract class AbstractProgressiveService extends Service
    * For compatibility purposes. Wraps the pending intent flag, return with FLAG_IMMUTABLE if device
    * SDK >= 32.
    *
-   * @see PendingIntent.FLAG_IMMUTABLE
+   * @see //PendingIntent.FLAG_IMMUTABLE
    * @param pendingIntentFlag proposed PendingIntent flag
    * @return original PendingIntent flag if SDK < 32, otherwise adding FLAG_IMMUTABLE flag.
    */

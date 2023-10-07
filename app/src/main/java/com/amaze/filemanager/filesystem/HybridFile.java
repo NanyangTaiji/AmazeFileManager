@@ -26,8 +26,7 @@ import static com.amaze.filemanager.filesystem.ftp.NetCopyClientConnectionPool.F
 import static com.amaze.filemanager.filesystem.ftp.NetCopyClientConnectionPool.SSH_URI_PREFIX;
 import static com.amaze.filemanager.filesystem.ftp.NetCopyConnectionInfo.MULTI_SLASH;
 import static com.amaze.filemanager.filesystem.smb.CifsContexts.SMB_URI_PREFIX;
-import static com.amaze.filemanager.filesystem.ssh.SFTPClientExtKt.READ_AHEAD_MAX_UNCONFIRMED_READS;
-import static com.amaze.filemanager.filesystem.ssh.SshClientUtils.sftpGetSize;
+import static com.amaze.filemanager.filesystem.ssh.SFTPClientExt.READ_AHEAD_MAX_UNCONFIRMED_READS;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -69,11 +68,12 @@ import com.amaze.filemanager.filesystem.files.GenericCopyUtil;
 import com.amaze.filemanager.filesystem.ftp.ExtensionsKt;
 import com.amaze.filemanager.filesystem.ftp.FTPClientImpl;
 import com.amaze.filemanager.filesystem.ftp.FtpClientTemplate;
+import com.amaze.filemanager.filesystem.ftp.NetCopyClient;
 import com.amaze.filemanager.filesystem.ftp.NetCopyClientUtils;
 import com.amaze.filemanager.filesystem.ftp.NetCopyConnectionInfo;
 import com.amaze.filemanager.filesystem.root.DeleteFileCommand;
 import com.amaze.filemanager.filesystem.root.ListFilesCommand;
-import com.amaze.filemanager.filesystem.ssh.SFTPClientExtKt;
+import com.amaze.filemanager.filesystem.ssh.SFTPClientExt;
 import com.amaze.filemanager.filesystem.ssh.SFtpClientTemplate;
 import com.amaze.filemanager.filesystem.ssh.SshClientSessionTemplate;
 import com.amaze.filemanager.filesystem.ssh.SshClientUtils;
@@ -356,7 +356,7 @@ public class HybridFile {
                 if (this instanceof HybridFileParcelable) {
                     return ((HybridFileParcelable) this).getSize();
                 } else {
-                    return sftpGetSize.invoke(getPath());
+                    return SshClientUtils.sftpGetSize(getPath());
                 }
             case SMB:
                 s =
@@ -509,8 +509,13 @@ public class HybridFile {
 
     @Nullable
     public FTPFile getFtpFile() {
-        return NetCopyClientUtils.INSTANCE.execute(
+        return NetCopyClientUtils.execute(
                 new FtpClientTemplate<FTPFile>(path, false) {
+                    @Override
+                    public FTPFile execute(NetCopyClient<FTPClient> client) throws IOException {
+                        return null;
+                    }
+
                     public FTPFile executeWithFtpClient(@NonNull FTPClient ftpClient) throws IOException {
                         String path =
                                 NetCopyClientUtils.extractRemotePathFrom(getParent(AppConfig.getInstance()));
@@ -741,7 +746,7 @@ public class HybridFile {
                     }
                 }
                 if (retval == -1L) {
-                    Long returnValue = sftpGetSize.invoke(getPath());
+                    Long returnValue = SshClientUtils.sftpGetSize(getPath());
                     if (returnValue == null) {
                         LOG.error("Error obtaining size of folder over SFTP");
                     }
@@ -1006,8 +1011,13 @@ public class HybridFile {
             case FTP:
                 String thisPath = NetCopyClientUtils.extractRemotePathFrom(getPath());
                 FTPFile[] ftpFiles =
-                        NetCopyClientUtils.INSTANCE.execute(
+                        NetCopyClientUtils.execute(
                                 new FtpClientTemplate<FTPFile[]>(getPath(), false) {
+                                    @Override
+                                    public FTPFile[] execute(NetCopyClient<FTPClient> client) throws IOException {
+                                        return new FTPFile[0];
+                                    }
+
                                     public FTPFile[] executeWithFtpClient(@NonNull FTPClient ftpClient)
                                             throws IOException {
                                         ftpClient.changeWorkingDirectory(thisPath);
@@ -1099,7 +1109,7 @@ public class HybridFile {
                                     @Override
                                     public InputStream execute(@NonNull final SFTPClient client) throws IOException {
                                         final RemoteFile rf =
-                                                SFTPClientExtKt.openWithReadAheadSupport(
+                                                SFTPClientExt.openWithReadAheadSupport(
                                                         client, NetCopyClientUtils.extractRemotePathFrom(getPath()));
                                         return rf.new ReadAheadRemoteFileInputStream(READ_AHEAD_MAX_UNCONFIRMED_READS) {
                                             @Override
@@ -1129,8 +1139,13 @@ public class HybridFile {
                 break;
             case FTP:
                 inputStream =
-                        NetCopyClientUtils.INSTANCE.execute(
+                        NetCopyClientUtils.execute(
                                 new FtpClientTemplate<InputStream>(getPath(), false) {
+                                    @Override
+                                    public InputStream execute(NetCopyClient<FTPClient> client) throws IOException {
+                                        return null;
+                                    }
+
                                     public InputStream executeWithFtpClient(@NonNull FTPClient ftpClient)
                                             throws IOException {
                                         String parent = getParent(AppConfig.getInstance());
@@ -1233,8 +1248,13 @@ public class HybridFile {
                         });
             case FTP:
                 outputStream =
-                        NetCopyClientUtils.INSTANCE.execute(
+                        NetCopyClientUtils.execute(
                                 new FtpClientTemplate<OutputStream>(path, false) {
+                                    @Override
+                                    public OutputStream execute(NetCopyClient<FTPClient> client) throws IOException {
+                                        return null;
+                                    }
+
                                     public OutputStream executeWithFtpClient(@NonNull FTPClient ftpClient)
                                             throws IOException {
                                         ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
@@ -1291,7 +1311,7 @@ public class HybridFile {
         boolean exists = false;
         if (isSftp()) {
             final Boolean executionReturn =
-                    NetCopyClientUtils.INSTANCE.<SSHClient, Boolean>execute(
+                    NetCopyClientUtils.<SSHClient, Boolean>execute(
                             new SFtpClientTemplate<Boolean>(path, true) {
                                 @Override
                                 public Boolean execute(SFTPClient client) throws IOException {
@@ -1397,8 +1417,13 @@ public class HybridFile {
             }
         } else if (isFtp()) {
             return Boolean.TRUE.equals(
-                    NetCopyClientUtils.INSTANCE.execute(
+                    NetCopyClientUtils.execute(
                             new FtpClientTemplate<Boolean>(path, false) {
+                                @Override
+                                public Boolean execute(NetCopyClient<FTPClient> client) throws IOException {
+                                    return null;
+                                }
+
                                 public Boolean executeWithFtpClient(@NonNull FTPClient ftpClient)
                                         throws IOException {
                                     return ftpClient.setModificationTime(
@@ -1446,8 +1471,13 @@ public class HybridFile {
                         }
                     });
         } else if (isFtp()) {
-            NetCopyClientUtils.INSTANCE.execute(
+            NetCopyClientUtils.execute(
                     new FtpClientTemplate<Boolean>(getPath(), false) {
+                        @Override
+                        public Boolean execute(NetCopyClient<FTPClient> client) throws IOException {
+                            return null;
+                        }
+
                         public Boolean executeWithFtpClient(@NonNull FTPClient ftpClient) throws IOException {
                             ExtensionsKt.makeDirectoryTree(
                                     ftpClient, NetCopyClientUtils.extractRemotePathFrom(getPath()));
@@ -1507,8 +1537,13 @@ public class HybridFile {
             return retval != null && retval;
         } else if (isFtp()) {
             Boolean retval =
-                    NetCopyClientUtils.INSTANCE.<FTPClient, Boolean>execute(
+                    NetCopyClientUtils.<FTPClient, Boolean>execute(
                             new FtpClientTemplate<Boolean>(path, false) {
+                                @Override
+                                public Boolean execute(NetCopyClient<FTPClient> client) throws IOException {
+                                    return null;
+                                }
+
                                 @Override
                                 public Boolean executeWithFtpClient(@NonNull FTPClient ftpClient)
                                         throws IOException {

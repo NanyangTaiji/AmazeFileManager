@@ -27,8 +27,8 @@ import com.amaze.filemanager.application.AppConfig
 import com.amaze.filemanager.fileoperations.filesystem.FolderState.DOESNT_EXIST
 import com.amaze.filemanager.fileoperations.filesystem.FolderState.WRITABLE_ON_REMOTE
 import com.amaze.filemanager.filesystem.ftp.NetCopyConnectionInfo
-import com.amaze.filemanager.filesystem.ftp.NetCopyConnectionInfo.Companion.AT
-import com.amaze.filemanager.filesystem.ftp.NetCopyConnectionInfo.Companion.COLON
+import com.amaze.filemanager.filesystem.ftp.NetCopyConnectionInfo.AT
+import com.amaze.filemanager.filesystem.ftp.NetCopyConnectionInfo.COLON
 import com.amaze.filemanager.filesystem.smb.CifsContexts.createWithDisableIpcSigningCheck
 import com.amaze.filemanager.utils.PasswordUtil
 import com.amaze.filemanager.utils.urlDecoded

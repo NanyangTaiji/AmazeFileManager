@@ -64,7 +64,7 @@ public class CalculateHashSftpCallback implements Callable<Hash> {
     return new SshClientSessionTemplate<String>(file.getPath()) {
       @Override
       public String execute(Session session) throws IOException {
-        String path = NetCopyClientUtils.INSTANCE.extractRemotePathFrom(file.getPath());
+        String path = NetCopyClientUtils.extractRemotePathFrom(file.getPath());
         String fullCommand = String.format(command, path);
         Session.Command cmd = session.exec(fullCommand);
         String result = new String(IOUtils.readFully(cmd.getInputStream()).toByteArray());

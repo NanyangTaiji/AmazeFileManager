@@ -1,0 +1,293 @@
+package com.amaze.filemanager.filesystem.ftp;
+
+import static com.amaze.filemanager.filesystem.ftp.NetCopyClientUtils.extractBaseUriFrom;
+
+import android.annotation.SuppressLint;
+import com.amaze.filemanager.application.AppConfig;
+import com.amaze.filemanager.asynchronous.asynctasks.ftp.auth.FtpAuthenticationTask;
+import com.amaze.filemanager.asynchronous.asynctasks.ssh.PemToKeyPairObservable;
+import com.amaze.filemanager.asynchronous.asynctasks.ssh.SshAuthenticationTask;
+import io.reactivex.Flowable;
+import io.reactivex.Maybe;
+import io.reactivex.Observable;
+import io.reactivex.Single;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
+import net.schmizz.sshj.Config;
+import net.schmizz.sshj.SSHClient;
+import org.apache.commons.net.ftp.FTPClient;
+import org.apache.commons.net.ftp.FTPSClient;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.security.KeyPair;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
+
+public class NetCopyClientConnectionPool {
+
+    public static final int FTP_DEFAULT_PORT = 21;
+    public static final int FTPS_DEFAULT_PORT = 990;
+    public static final int SSH_DEFAULT_PORT = 22;
+    public static final String FTP_URI_PREFIX = "ftp://";
+    public static final String FTPS_URI_PREFIX = "ftps://";
+    public static final String SSH_URI_PREFIX = "ssh://";
+    public static final int CONNECT_TIMEOUT = 30000;
+
+    private static Map<String, NetCopyClient<?>> connections = new ConcurrentHashMap<>();
+
+    private static final Logger LOG = LoggerFactory.getLogger(NetCopyClientConnectionPool.class);
+
+    private static SSHClientFactory sshClientFactory = new DefaultSSHClientFactory();
+    private static FTPClientFactory ftpClientFactory = new DefaultFTPClientFactory();
+
+    public static <ClientType> NetCopyClient<ClientType> getConnection(String url) {
+        NetCopyClient<?> client = connections.get(url);
+        if (client == null) {
+            client = createNetCopyClient(url);
+            if (client != null) {
+                connections.put(extractBaseUriFrom(url), client);
+            }
+        } else {
+            if (!validate(client)) {
+                LOG.debug("Connection no longer usable. Reconnecting...");
+                expire(client);
+                connections.remove(url);
+                client = createNetCopyClient(url);
+                if (client != null) {
+                    connections.put(extractBaseUriFrom(url), client);
+                }
+            }
+        }
+        return client != null ? (NetCopyClient<ClientType>) client : null;
+    }
+
+    public static NetCopyClient<?> getConnection(
+            String protocol,
+            String host,
+            int port,
+            String hostFingerprint,
+            String username,
+            String password,
+            KeyPair keyPair
+    ) {
+        String url = NetCopyClientUtils.deriveUriFrom(protocol, host, port, "", username, password);
+        NetCopyClient<?> client = connections.get(url);
+        if (client == null) {
+            client = createNetCopyClientInternal(protocol, host, port, hostFingerprint, username, password, keyPair);
+            if (client != null) {
+                connections.put(url, client);
+            }
+        } else {
+            if (!validate(client)) {
+                LOG.debug("Connection no longer usable. Reconnecting...");
+                expire(client);
+                connections.remove(url);
+                client = createNetCopyClient(url);
+                if (client != null) {
+                    connections.put(url, client);
+                }
+            }
+        }
+        return client;
+    }
+
+    private static NetCopyClient<?> createNetCopyClient(String url) {
+        if (url.startsWith(SSH_URI_PREFIX)) {
+            return createSshClient(url);
+        } else {
+            return createFtpClient(url);
+        }
+    }
+
+    private static NetCopyClient<?> createNetCopyClientInternal(
+            String protocol,
+            String host,
+            int port,
+            String hostFingerprint,
+            String username,
+            String password,
+            KeyPair keyPair
+    ) {
+        if (protocol.equals(SSH_URI_PREFIX)) {
+            return createSshClient(host, port, hostFingerprint, username, password, keyPair);
+        } else {
+            return createFtpClient(protocol, host, port, hostFingerprint, username, password);
+        }
+    }
+
+    @SuppressLint("CheckResult")
+    public static void removeConnection(String url, Runnable callback) {
+        Maybe.fromCallable(new AsyncRemoveConnection(url))
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(callback::run);
+    }
+
+    public static void shutdown() {
+        AppConfig.getInstance().runInBackground(() -> {
+            if (!connections.isEmpty()) {
+                connections.values().forEach(NetCopyClient::expire);
+                connections.clear();
+            }
+        });
+    }
+
+    private static boolean validate(NetCopyClient<?> client) {
+        return Single.fromCallable(client::isConnectionValid)
+                .subscribeOn(NetCopyClientUtils.getScheduler(client))
+                .blockingGet();
+    }
+
+    private static void expire(NetCopyClient<?> client) {
+        Flowable.fromCallable(client::expire)
+                .subscribeOn(NetCopyClientUtils.getScheduler(client))
+                .subscribe();
+    }
+
+    private static NetCopyClient<SSHClient> createSshClient(String url) {
+        NetCopyConnectionInfo connInfo = new NetCopyConnectionInfo(url);
+        AppConfig appConfig = AppConfig.getInstance();
+        KeyPair keyPair = null;
+        String pem = appConfig.getUtilsHandler().getSshAuthPrivateKey(url);
+        if (pem != null && !pem.isEmpty()) {
+            PemToKeyPairObservable observable = new PemToKeyPairObservable(pem);
+            AtomicReference<KeyPair> keyPairRef = new AtomicReference<>(null);
+            observable.subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .retryWhen(exceptions -> exceptions.flatMap(exception ->
+                            Observable.create(subscriber ->
+                                    observable.displayPassphraseDialog(exception, subscriber::onNext, subscriber::onError)))
+                    )
+                    .blockingFirst(keyPairRef::set);
+            keyPair = keyPairRef.get();
+        }
+        String hostKey = appConfig.getUtilsHandler().getRemoteHostKey(url);
+        return createSshClientInternal(connInfo.getHost(), connInfo.getPort(), hostKey, connInfo.getUsername(), connInfo.getPassword(), keyPair);
+    }
+
+    private static NetCopyClient<SSHClient> createSshClient(
+            String host,
+            int port,
+            String hostKey,
+            String username,
+            String password,
+            KeyPair keyPair
+    ) {
+        return createSshClientInternal(host, port, hostKey, username, password, keyPair);
+    }
+
+    private static NetCopyClient<SSHClient> createSshClientInternal(
+            String host,
+            int port,
+            String hostKey,
+            String username,
+            String password,
+            KeyPair keyPair
+    ) {
+        SshAuthenticationTask task = new SshAuthenticationTask(host, port, hostKey, username, password, keyPair);
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference<SSHClient> retval = new AtomicReference<>(null);
+        Maybe.fromCallable(task.getTask())
+                .subscribeOn(Schedulers.io())
+                .subscribe(
+                        retval::set,
+                        throwable -> {
+                            latch.countDown();
+                            task.onError(throwable);
+                        },
+                        latch::countDown
+                );
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return retval.get() != null ? new SSHClientImpl(retval.get()) : null;
+    }
+
+    private static NetCopyClient<FTPClient> createFtpClient(String url) {
+        NetCopyConnectionInfo connInfo = new NetCopyConnectionInfo(url);
+        String certInfo = null;
+        if (FTPS_URI_PREFIX.equals(connInfo.getPrefix())) {
+            certInfo = AppConfig.getInstance().getUtilsHandler().getRemoteHostKey(url);
+        }
+        return createFtpClient(connInfo.getPrefix(), connInfo.getHost(), connInfo.getPort(), certInfo != null ? new JSONObject(certInfo) : null, connInfo.getUsername(), connInfo.getPassword());
+    }
+
+    private static NetCopyClient<FTPClient> createFtpClient(
+            String protocol,
+            String host,
+            int port,
+            JSONObject certInfo,
+            String username,
+            String password
+    ) {
+        FtpAuthenticationTask task = new FtpAuthenticationTask(protocol, host, port, certInfo, username, password);
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference<FTPClient> result = new AtomicReference<>(null);
+        Single.fromCallable(task.getTask())
+                .subscribeOn(Schedulers.io())
+                .subscribe(
+                        result::set,
+                        throwable -> {
+                            latch.countDown();
+                            task.onError(throwable);
+                        },
+                        latch::countDown
+                );
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return result.get() != null ? new FTPClientImpl(result.get()) : null;
+    }
+
+    private static class AsyncRemoveConnection implements Callable<Void> {
+        private final String url;
+
+        public AsyncRemoveConnection(String url) {
+            this.url = url;
+        }
+
+        @Override
+        public Void call() {
+            String baseUri = extractBaseUriFrom(url);
+            if (connections.containsKey(baseUri)) {
+                Objects.requireNonNull(connections.get(baseUri)).expire();
+                connections.remove(baseUri);
+            }
+            return null;
+        }
+    }
+
+    public interface SSHClientFactory {
+        SSHClient create(Config config);
+    }
+
+    public interface FTPClientFactory {
+        FTPClient create(String uri);
+    }
+
+    private static class DefaultSSHClientFactory implements SSHClientFactory {
+        @Override
+        public SSHClient create(Config config) {
+            return new SSHClient(config);
+        }
+    }
+
+    private static class DefaultFTPClientFactory implements FTPClientFactory {
+        @Override
+        public FTPClient create(String uri) {
+            return uri.startsWith(FTPS_URI_PREFIX) ? new FTPSClient("TLS", true) : new FTPClient();
+        }
+    }
+}
+

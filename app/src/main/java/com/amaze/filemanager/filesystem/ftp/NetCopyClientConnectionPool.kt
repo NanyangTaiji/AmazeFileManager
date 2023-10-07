@@ -140,7 +140,8 @@ object NetCopyClientConnectionPool {
             port,
             "",
             username,
-            password
+            password,
+            true
         )
         var client = connections[url]
         if (client == null) {

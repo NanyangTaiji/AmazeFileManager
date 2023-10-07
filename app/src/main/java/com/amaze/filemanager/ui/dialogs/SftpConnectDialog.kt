@@ -58,7 +58,7 @@ import com.amaze.filemanager.filesystem.ftp.NetCopyClientConnectionPool.FTPS_URI
 import com.amaze.filemanager.filesystem.ftp.NetCopyClientConnectionPool.FTP_URI_PREFIX
 import com.amaze.filemanager.filesystem.ftp.NetCopyClientConnectionPool.SSH_URI_PREFIX
 import com.amaze.filemanager.filesystem.ftp.NetCopyClientUtils
-import com.amaze.filemanager.filesystem.ftp.NetCopyConnectionInfo.Companion.COLON
+import com.amaze.filemanager.filesystem.ftp.NetCopyConnectionInfo.COLON
 import com.amaze.filemanager.ui.activities.MainActivity
 import com.amaze.filemanager.ui.activities.superclasses.ThemedActivity
 import com.amaze.filemanager.ui.icons.MimeTypes
@@ -274,7 +274,7 @@ class SftpConnectDialog : DialogFragment() {
     private fun appendButtonListenersForEdit(
         dialogBuilder: MaterialDialog.Builder
     ) {
-        createConnectionSettings(edit = true).run {
+        createConnectionSettings(true).run {
             dialogBuilder
                 .negativeText(R.string.delete)
                 .onNegative { dialog: MaterialDialog, _: DialogAction? ->
@@ -285,7 +285,7 @@ class SftpConnectDialog : DialogFragment() {
                         defaultPath,
                         username,
                         requireArguments().getString(ARG_PASSWORD, null),
-                        edit = true
+                        true
                     )
                     val i = DataUtils.getInstance().containsServer(
                         arrayOf(connectionName, path)
@@ -781,7 +781,8 @@ class SftpConnectDialog : DialogFragment() {
             port,
             defaultPath,
             username,
-            password
+            password,
+            true
         )
     }
 

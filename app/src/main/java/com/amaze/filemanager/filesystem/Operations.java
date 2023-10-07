@@ -42,6 +42,7 @@ import com.amaze.filemanager.fileoperations.filesystem.OpenMode;
 import com.amaze.filemanager.filesystem.cloud.CloudUtil;
 import com.amaze.filemanager.filesystem.files.FileUtils;
 import com.amaze.filemanager.filesystem.ftp.FtpClientTemplate;
+import com.amaze.filemanager.filesystem.ftp.NetCopyClient;
 import com.amaze.filemanager.filesystem.ftp.NetCopyClientUtils;
 import com.amaze.filemanager.filesystem.root.MakeDirectoryCommand;
 import com.amaze.filemanager.filesystem.root.MakeFileCommand;
@@ -615,8 +616,13 @@ public class Operations {
                 }
               });
         } else if (oldFile.isFtp()) {
-          NetCopyClientUtils.INSTANCE.execute(
+          NetCopyClientUtils.execute(
               new FtpClientTemplate<Boolean>(oldFile.getPath(), false) {
+                @Override
+                public Boolean execute(NetCopyClient<FTPClient> client) throws IOException {
+                  return null;
+                }
+
                 public Boolean executeWithFtpClient(@NonNull FTPClient ftpClient)
                     throws IOException {
                   boolean result =

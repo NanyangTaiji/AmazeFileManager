@@ -454,7 +454,7 @@ public class MainActivityHelper {
     if (OpenMode.SMB.equals(openMode)) {
       return SmbUtil.checkFolder(path);
     } else if (OpenMode.SFTP.equals(openMode) || OpenMode.FTP.equals(openMode)) {
-      int result = NetCopyClientUtils.INSTANCE.checkFolder(path);
+      int result = NetCopyClientUtils.checkFolder(path);
       return result;
     } else if (OpenMode.DOCUMENT_FILE.equals(openMode)) {
       DocumentFile d =

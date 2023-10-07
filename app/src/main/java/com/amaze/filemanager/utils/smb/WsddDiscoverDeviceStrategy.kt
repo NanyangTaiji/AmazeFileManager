@@ -23,7 +23,7 @@ package com.amaze.filemanager.utils.smb
 import androidx.annotation.VisibleForTesting
 import com.amaze.filemanager.R
 import com.amaze.filemanager.application.AppConfig
-import com.amaze.filemanager.filesystem.ftp.NetCopyConnectionInfo.Companion.SLASH
+import com.amaze.filemanager.filesystem.ftp.NetCopyConnectionInfo.SLASH
 import com.amaze.filemanager.utils.ComputerParcelable
 import com.amaze.filemanager.utils.NetworkUtil
 import okhttp3.Headers.Companion.toHeaders

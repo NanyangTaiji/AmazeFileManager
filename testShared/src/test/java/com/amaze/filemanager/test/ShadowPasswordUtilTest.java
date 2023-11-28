@@ -76,11 +76,11 @@ public class ShadowPasswordUtilTest {
   public void testEncryptDecrypt() throws GeneralSecurityException, IOException {
     String text = "test";
     String encrypted =
-        PasswordUtil.INSTANCE.encryptPassword(
+        PasswordUtil.encryptPassword(
             ApplicationProvider.getApplicationContext(), text, Base64.DEFAULT);
     assertEquals(
         text,
-        PasswordUtil.INSTANCE.decryptPassword(
+        PasswordUtil.decryptPassword(
             ApplicationProvider.getApplicationContext(), encrypted, Base64.DEFAULT));
   }
 
@@ -98,7 +98,7 @@ public class ShadowPasswordUtilTest {
     utilsHandler.saveToDatabase(
         new OperationData(
             UtilsHandler.Operation.SFTP,
-            NetCopyClientUtils.INSTANCE.encryptFtpPathAsNecessary(url),
+            NetCopyClientUtils.encryptFtpPathAsNecessary(url),
             "Test",
             fingerprint,
             null,
@@ -111,7 +111,7 @@ public class ShadowPasswordUtilTest {
               assertEquals(
                   fingerprint,
                   utilsHandler.getRemoteHostKey(
-                      NetCopyClientUtils.INSTANCE.encryptFtpPathAsNecessary(url)));
+                      NetCopyClientUtils.encryptFtpPathAsNecessary(url)));
               utilitiesDatabase.close();
               return true;
             });

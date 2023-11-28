@@ -317,7 +317,7 @@ public class CopyService extends AbstractProgressiveService {
         if (sourceFile.getName(c).endsWith(CryptUtil.CRYPT_EXTENSION)) {
           try {
 
-            CryptHandler cryptHandler = CryptHandler.INSTANCE;
+            CryptHandler cryptHandler = CryptHandler.getInstance();
             EncryptedEntry oldEntry = cryptHandler.findEntry(sourceFile.getPath());
             EncryptedEntry newEntry = new EncryptedEntry();
 

@@ -70,7 +70,7 @@ public class NetCopyClientConnectionPool {
      * @return [NetCopyClient] connection, already opened and authenticated
      * @throws IOException IOExceptions that occur during connection setup
      */
-    public  <ClientType> NetCopyClient<ClientType> getConnection(String url) throws IOException {
+    public static <ClientType> NetCopyClient<ClientType> getConnection(String url) throws IOException {
         NetCopyClient<ClientType> client = (NetCopyClient<ClientType>) connections.get(url);
         if (client == null) {
             client = (NetCopyClient<ClientType>) createNetCopyClient(url);
@@ -266,7 +266,7 @@ public class NetCopyClientConnectionPool {
         return result.get() != null ? new FTPClientImpl(result.get()) : null;
     }
 
-    public void removeConnection(String url, Runnable callback) {
+    public static void removeConnection(String url, Runnable callback) {
         Maybe.fromCallable(new AsyncRemoveConnection(url)).subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread()).subscribe(callback::run);
     }
@@ -289,7 +289,7 @@ public class NetCopyClientConnectionPool {
     }
 
 
-    class AsyncRemoveConnection implements Callable<Void> {
+    static class AsyncRemoveConnection implements Callable<Void> {
         private final String url;
 
         public AsyncRemoveConnection(String url) {

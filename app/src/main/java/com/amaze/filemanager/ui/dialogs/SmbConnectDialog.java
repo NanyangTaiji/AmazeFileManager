@@ -268,7 +268,7 @@ public class SmbConnectDialog extends DialogFragment {
           userp = inf.substring(0, inf.indexOf(":"));
           try {
             passp =
-                PasswordUtil.INSTANCE.decryptPassword(
+                PasswordUtil.decryptPassword(
                     context, inf.substring(inf.indexOf(COLON) + 1), URL_SAFE);
             passp = decode(passp, Charsets.UTF_8.name());
           } catch (GeneralSecurityException | IOException e) {

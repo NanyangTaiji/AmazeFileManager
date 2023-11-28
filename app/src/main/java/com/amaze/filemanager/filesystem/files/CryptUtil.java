@@ -87,311 +87,311 @@ import kotlin.io.ConstantsKt;
  */
 public class CryptUtil {
 
-  public static final String KEY_STORE_ANDROID = "AndroidKeyStore";
-  public static final String KEY_ALIAS_AMAZE = "AmazeKey";
-  public static final String ALGO_AES = "AES/GCM/NoPadding";
-  // TODO: Generate a random IV every time, and keep track of it (in database against encrypted
-  // files)
-  private static final String IV =
-      BuildConfig.CRYPTO_IV; // 12 byte long IV supported by android for GCM
-  private static final int GCM_TAG_LENGTH = 128;
-  private final Logger LOG = LoggerFactory.getLogger(CryptUtil.class);
+    public static final String KEY_STORE_ANDROID = "AndroidKeyStore";
+    public static final String KEY_ALIAS_AMAZE = "AmazeKey";
+    public static final String ALGO_AES = "AES/GCM/NoPadding";
+    // TODO: Generate a random IV every time, and keep track of it (in database against encrypted
+    // files)
+    private static final String IV =
+            BuildConfig.CRYPTO_IV; // 12 byte long IV supported by android for GCM
+    private static final int GCM_TAG_LENGTH = 128;
+    private final Logger LOG = LoggerFactory.getLogger(CryptUtil.class);
 
-  public static final String CRYPT_EXTENSION = ".aze";
-  public static final String AESCRYPT_EXTENSION = ".aes";
+    public static final String CRYPT_EXTENSION = ".aze";
+    public static final String AESCRYPT_EXTENSION = ".aes";
 
-  private final ProgressHandler progressHandler;
-  private final ArrayList<HybridFile> failedOps;
+    private final ProgressHandler progressHandler;
+    private final ArrayList<HybridFile> failedOps;
 
-  /**
-   * Constructor will start encryption process serially. Make sure to call with background thread.
-   * The result file of encryption will be in the same directory with a {@link #CRYPT_EXTENSION}
-   * extension
-   *
-   * <p>Make sure you're done with encrypting password for this file and map it with this file in
-   * database
-   *
-   * <p>Be sure to use constructors to encrypt/decrypt files only, and to call service through
-   * {@link ServiceWatcherUtil} and to initialize watchers beforehand
-   *
-   * @param sourceFile the file to encrypt
-   */
-  public CryptUtil(
-      @NonNull Context context,
-      @NonNull HybridFileParcelable sourceFile,
-      @NonNull ProgressHandler progressHandler,
-      @NonNull ArrayList<HybridFile> failedOps,
-      @NonNull String targetFilename,
-      boolean useAesCrypt,
-      @Nullable String password)
-      throws GeneralSecurityException, IOException {
+    /**
+     * Constructor will start encryption process serially. Make sure to call with background thread.
+     * The result file of encryption will be in the same directory with a {@link #CRYPT_EXTENSION}
+     * extension
+     *
+     * <p>Make sure you're done with encrypting password for this file and map it with this file in
+     * database
+     *
+     * <p>Be sure to use constructors to encrypt/decrypt files only, and to call service through
+     * {@link ServiceWatcherUtil} and to initialize watchers beforehand
+     *
+     * @param sourceFile the file to encrypt
+     */
+    public CryptUtil(
+            @NonNull Context context,
+            @NonNull HybridFileParcelable sourceFile,
+            @NonNull ProgressHandler progressHandler,
+            @NonNull ArrayList<HybridFile> failedOps,
+            @NonNull String targetFilename,
+            boolean useAesCrypt,
+            @Nullable String password)
+            throws GeneralSecurityException, IOException {
 
-    this.progressHandler = progressHandler;
-    this.failedOps = failedOps;
+        this.progressHandler = progressHandler;
+        this.failedOps = failedOps;
 
-    // target encrypted file
-    HybridFile hFile = new HybridFile(sourceFile.getMode(), sourceFile.getParent(context));
-    encrypt(context, sourceFile, hFile, targetFilename, useAesCrypt, password);
-  }
-
-  /**
-   * Decrypt the file in specified path. Can be used to open the file (decrypt in cache) or simply
-   * decrypt the file in the same (or in a custom preference) directory Make sure to decrypt and
-   * check user provided passwords beforehand from database
-   *
-   * <p>Be sure to use constructors to encrypt/decrypt files only, and to call service through
-   * {@link ServiceWatcherUtil} and to initialize watchers beforehand
-   *
-   * @param baseFile the encrypted file
-   * @param targetPath the directory in which file is to be decrypted the source's parent in normal
-   *     case
-   */
-  public CryptUtil(
-      @NonNull Context context,
-      @NonNull HybridFileParcelable baseFile,
-      @NonNull String targetPath,
-      @NonNull ProgressHandler progressHandler,
-      @NonNull ArrayList<HybridFile> failedOps,
-      @Nullable String password)
-      throws GeneralSecurityException, IOException {
-
-    this.progressHandler = progressHandler;
-    this.failedOps = failedOps;
-    boolean useAesCrypt = baseFile.getName().endsWith(AESCRYPT_EXTENSION);
-
-    HybridFile targetDirectory = new HybridFile(OpenMode.FILE, targetPath);
-    if (!targetPath.equals(context.getExternalCacheDir())) {
-
-      // same file system as of base file
-      targetDirectory.setMode(baseFile.getMode());
-    }
-    decrypt(context, baseFile, targetDirectory, useAesCrypt, password);
-  }
-
-  /**
-   * Wrapper around handling decryption for directory tree
-   *
-   * @param sourceFile the source file to decrypt
-   * @param targetDirectory the target directory inside which we're going to decrypt
-   */
-  private void decrypt(
-      @NonNull final Context context,
-      @NonNull HybridFileParcelable sourceFile,
-      @NonNull HybridFile targetDirectory,
-      boolean useAescrypt,
-      @Nullable String password)
-      throws GeneralSecurityException, IOException {
-
-    if (progressHandler.getCancelled()) return;
-    if (sourceFile.isDirectory()) {
-
-      final HybridFile hFile =
-          new HybridFile(
-              targetDirectory.getMode(),
-              targetDirectory.getPath(),
-              sourceFile
-                  .getName(context)
-                  .replace(CRYPT_EXTENSION, "")
-                  .replace(AESCRYPT_EXTENSION, ""),
-              sourceFile.isDirectory());
-      MakeDirectoryOperation.mkdirs(context, hFile);
-
-      sourceFile.forEachChildrenFile(
-          context,
-          sourceFile.isRoot(),
-          file -> {
-            try {
-              decrypt(context, file, hFile, useAescrypt, password);
-            } catch (IOException | GeneralSecurityException e) {
-              throw new IllegalStateException(e); // throw unchecked exception, no throws needed
-            }
-          });
-    } else {
-
-      if (!sourceFile.getPath().endsWith(CRYPT_EXTENSION)
-          && !sourceFile.getPath().endsWith(AESCRYPT_EXTENSION)) {
-        failedOps.add(sourceFile);
-        return;
-      }
-
-      BufferedInputStream inputStream =
-          new BufferedInputStream(
-              sourceFile.getInputStream(context), GenericCopyUtil.DEFAULT_BUFFER_SIZE);
-
-      HybridFile targetFile =
-          new HybridFile(
-              targetDirectory.getMode(),
-              targetDirectory.getPath(),
-              sourceFile
-                  .getName(context)
-                  .replace(CRYPT_EXTENSION, "")
-                  .replace(AESCRYPT_EXTENSION, ""),
-              sourceFile.isDirectory());
-
-      progressHandler.setFileName(sourceFile.getName(context));
-
-      BufferedOutputStream outputStream =
-          new BufferedOutputStream(
-              targetFile.getOutputStream(context), GenericCopyUtil.DEFAULT_BUFFER_SIZE);
-
-      if (useAescrypt) {
-        new AESCrypt(password).decrypt(sourceFile.getSize(), inputStream, outputStream);
-      } else {
-        doEncrypt(inputStream, outputStream, Cipher.DECRYPT_MODE);
-      }
-    }
-  }
-
-  /**
-   * Wrapper around handling encryption in directory tree
-   *
-   * @param sourceFile the source file to encrypt
-   * @param targetDirectory the target directory in which we're going to encrypt
-   */
-  private void encrypt(
-      @NonNull final Context context,
-      @NonNull HybridFileParcelable sourceFile,
-      @NonNull HybridFile targetDirectory,
-      @NonNull String targetFilename,
-      boolean useAesCrypt,
-      @Nullable String password)
-      throws GeneralSecurityException, IOException {
-
-    if (progressHandler.getCancelled()) return;
-    if (sourceFile.isDirectory()) {
-
-      // succeed #CRYPT_EXTENSION at end of directory/file name
-      final HybridFile hFile =
-          new HybridFile(
-              targetDirectory.getMode(),
-              targetDirectory.getPath(),
-              targetFilename,
-              sourceFile.isDirectory());
-      MakeDirectoryOperation.mkdirs(context, hFile);
-
-      sourceFile.forEachChildrenFile(
-          context,
-          sourceFile.isRoot(),
-          file -> {
-            try {
-              encrypt(
-                  context,
-                  file,
-                  hFile,
-                  file.getName(context).concat(useAesCrypt ? AESCRYPT_EXTENSION : CRYPT_EXTENSION),
-                  useAesCrypt,
-                  password);
-            } catch (IOException | GeneralSecurityException e) {
-              throw new IllegalStateException(e); // throw unchecked exception, no throws needed
-            }
-          });
-    } else {
-
-      if (sourceFile.getName(context).endsWith(CRYPT_EXTENSION)
-          || sourceFile.getName(context).endsWith(AESCRYPT_EXTENSION)) {
-        failedOps.add(sourceFile);
-        return;
-      }
-
-      BufferedInputStream inputStream =
-          new BufferedInputStream(
-              sourceFile.getInputStream(context), GenericCopyUtil.DEFAULT_BUFFER_SIZE);
-
-      // succeed #CRYPT_EXTENSION at end of directory/file name
-      HybridFile targetFile =
-          new HybridFile(
-              targetDirectory.getMode(),
-              targetDirectory.getPath(),
-              targetFilename,
-              sourceFile.isDirectory());
-
-      progressHandler.setFileName(sourceFile.getName(context));
-
-      BufferedOutputStream outputStream =
-          new BufferedOutputStream(
-              targetFile.getOutputStream(context), GenericCopyUtil.DEFAULT_BUFFER_SIZE);
-
-      if (useAesCrypt) {
-        new AESCrypt(password)
-            .encrypt(
-                AESCrypt.AESCRYPT_SPEC_VERSION,
-                sourceFile.getInputStream(AppConfig.getInstance()),
-                targetFile.getOutputStream(AppConfig.getInstance()),
-                progressHandler);
-      } else {
-        doEncrypt(inputStream, outputStream, Cipher.ENCRYPT_MODE);
-      }
-    }
-  }
-
-  /**
-   * Core encryption/decryption routine.
-   *
-   * @param inputStream stream associated with the file to be encrypted
-   * @param outputStream stream associated with new output encrypted file
-   * @param operationMode either <code>Cipher.ENCRYPT_MODE</code> or <code>Cipher.DECRYPT_MODE
-   *     </code>
-   */
-  private void doEncrypt(
-      BufferedInputStream inputStream, BufferedOutputStream outputStream, int operationMode)
-      throws GeneralSecurityException, IOException {
-
-    Cipher cipher = Cipher.getInstance(ALGO_AES);
-    AlgorithmParameterSpec parameterSpec;
-    if (SDK_INT >= KITKAT) {
-      parameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, IV.getBytes());
-    } else {
-      parameterSpec = new IvParameterSpec(IV.getBytes());
+        // target encrypted file
+        HybridFile hFile = new HybridFile(sourceFile.getMode(), sourceFile.getParent(context));
+        encrypt(context, sourceFile, hFile, targetFilename, useAesCrypt, password);
     }
 
-    Key secretKey = SecretKeygen.INSTANCE.getSecretKey();
-    if (secretKey == null) {
-      // Discard crypto setup objects and just pipe input to output
-      parameterSpec = null;
-      cipher = null;
-      ByteStreamsKt.copyTo(inputStream, outputStream, ConstantsKt.DEFAULT_BUFFER_SIZE);
-      inputStream.close();
-      outputStream.close();
-    } else {
-      cipher.init(operationMode, SecretKeygen.INSTANCE.getSecretKey(), parameterSpec);
+    /**
+     * Decrypt the file in specified path. Can be used to open the file (decrypt in cache) or simply
+     * decrypt the file in the same (or in a custom preference) directory Make sure to decrypt and
+     * check user provided passwords beforehand from database
+     *
+     * <p>Be sure to use constructors to encrypt/decrypt files only, and to call service through
+     * {@link ServiceWatcherUtil} and to initialize watchers beforehand
+     *
+     * @param baseFile   the encrypted file
+     * @param targetPath the directory in which file is to be decrypted the source's parent in normal
+     *                   case
+     */
+    public CryptUtil(
+            @NonNull Context context,
+            @NonNull HybridFileParcelable baseFile,
+            @NonNull String targetPath,
+            @NonNull ProgressHandler progressHandler,
+            @NonNull ArrayList<HybridFile> failedOps,
+            @Nullable String password)
+            throws GeneralSecurityException, IOException {
 
-      byte[] buffer = new byte[GenericCopyUtil.DEFAULT_BUFFER_SIZE];
-      int count;
+        this.progressHandler = progressHandler;
+        this.failedOps = failedOps;
+        boolean useAesCrypt = baseFile.getName().endsWith(AESCRYPT_EXTENSION);
 
-      CipherOutputStream cipherOutputStream = new CipherOutputStream(outputStream, cipher);
+        HybridFile targetDirectory = new HybridFile(OpenMode.FILE, targetPath);
+        if (!targetPath.equals(context.getExternalCacheDir())) {
 
-      try {
-        while ((count = inputStream.read(buffer)) != -1) {
-          if (!progressHandler.getCancelled()) {
-            cipherOutputStream.write(buffer, 0, count);
-            ServiceWatcherUtil.position += count;
-          } else break;
+            // same file system as of base file
+            targetDirectory.setMode(baseFile.getMode());
         }
-      } catch (Exception x) {
-        LOG.error("I/O error writing output", x);
-      } finally {
-        cipherOutputStream.flush();
-        cipherOutputStream.close();
-        inputStream.close();
-        outputStream.close();
-      }
+        decrypt(context, baseFile, targetDirectory, useAesCrypt, password);
     }
-  }
 
-  /**
-   * Method initializes a Cipher to be used by {@link
-   * android.hardware.fingerprint.FingerprintManager}
-   */
-  public static Cipher initCipher() throws GeneralSecurityException {
-    Cipher cipher = null;
-    if (SDK_INT >= KITKAT) {
-      cipher = Cipher.getInstance(ALGO_AES);
-      GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, IV.getBytes());
-      cipher.init(Cipher.ENCRYPT_MODE, SecretKeygen.INSTANCE.getSecretKey(), gcmParameterSpec);
-    } else if (SDK_INT >= JELLY_BEAN_MR2) {
-      cipher = Cipher.getInstance(ALGO_AES);
-      cipher.init(Cipher.ENCRYPT_MODE, SecretKeygen.INSTANCE.getSecretKey());
+    /**
+     * Wrapper around handling decryption for directory tree
+     *
+     * @param sourceFile      the source file to decrypt
+     * @param targetDirectory the target directory inside which we're going to decrypt
+     */
+    private void decrypt(
+            @NonNull final Context context,
+            @NonNull HybridFileParcelable sourceFile,
+            @NonNull HybridFile targetDirectory,
+            boolean useAescrypt,
+            @Nullable String password)
+            throws GeneralSecurityException, IOException {
+
+        if (progressHandler.getCancelled()) return;
+        if (sourceFile.isDirectory()) {
+
+            final HybridFile hFile =
+                    new HybridFile(
+                            targetDirectory.getMode(),
+                            targetDirectory.getPath(),
+                            sourceFile
+                                    .getName(context)
+                                    .replace(CRYPT_EXTENSION, "")
+                                    .replace(AESCRYPT_EXTENSION, ""),
+                            sourceFile.isDirectory());
+            MakeDirectoryOperation.mkdirs(context, hFile);
+
+            sourceFile.forEachChildrenFile(
+                    context,
+                    sourceFile.isRoot(),
+                    file -> {
+                        try {
+                            decrypt(context, file, hFile, useAescrypt, password);
+                        } catch (IOException | GeneralSecurityException e) {
+                            throw new IllegalStateException(e); // throw unchecked exception, no throws needed
+                        }
+                    });
+        } else {
+
+            if (!sourceFile.getPath().endsWith(CRYPT_EXTENSION)
+                    && !sourceFile.getPath().endsWith(AESCRYPT_EXTENSION)) {
+                failedOps.add(sourceFile);
+                return;
+            }
+
+            BufferedInputStream inputStream =
+                    new BufferedInputStream(
+                            sourceFile.getInputStream(context), GenericCopyUtil.DEFAULT_BUFFER_SIZE);
+
+            HybridFile targetFile =
+                    new HybridFile(
+                            targetDirectory.getMode(),
+                            targetDirectory.getPath(),
+                            sourceFile
+                                    .getName(context)
+                                    .replace(CRYPT_EXTENSION, "")
+                                    .replace(AESCRYPT_EXTENSION, ""),
+                            sourceFile.isDirectory());
+
+            progressHandler.setFileName(sourceFile.getName(context));
+
+            BufferedOutputStream outputStream =
+                    new BufferedOutputStream(
+                            targetFile.getOutputStream(context), GenericCopyUtil.DEFAULT_BUFFER_SIZE);
+
+            if (useAescrypt) {
+                new AESCrypt(password).decrypt(sourceFile.getSize(), inputStream, outputStream);
+            } else {
+                doEncrypt(inputStream, outputStream, Cipher.DECRYPT_MODE);
+            }
+        }
     }
-    return cipher;
-  }
+
+    /**
+     * Wrapper around handling encryption in directory tree
+     *
+     * @param sourceFile      the source file to encrypt
+     * @param targetDirectory the target directory in which we're going to encrypt
+     */
+    private void encrypt(
+            @NonNull final Context context,
+            @NonNull HybridFileParcelable sourceFile,
+            @NonNull HybridFile targetDirectory,
+            @NonNull String targetFilename,
+            boolean useAesCrypt,
+            @Nullable String password)
+            throws GeneralSecurityException, IOException {
+
+        if (progressHandler.getCancelled()) return;
+        if (sourceFile.isDirectory()) {
+
+            // succeed #CRYPT_EXTENSION at end of directory/file name
+            final HybridFile hFile =
+                    new HybridFile(
+                            targetDirectory.getMode(),
+                            targetDirectory.getPath(),
+                            targetFilename,
+                            sourceFile.isDirectory());
+            MakeDirectoryOperation.mkdirs(context, hFile);
+
+            sourceFile.forEachChildrenFile(
+                    context,
+                    sourceFile.isRoot(),
+                    file -> {
+                        try {
+                            encrypt(
+                                    context,
+                                    file,
+                                    hFile,
+                                    file.getName(context).concat(useAesCrypt ? AESCRYPT_EXTENSION : CRYPT_EXTENSION),
+                                    useAesCrypt,
+                                    password);
+                        } catch (IOException | GeneralSecurityException e) {
+                            throw new IllegalStateException(e); // throw unchecked exception, no throws needed
+                        }
+                    });
+        } else {
+
+            if (sourceFile.getName(context).endsWith(CRYPT_EXTENSION)
+                    || sourceFile.getName(context).endsWith(AESCRYPT_EXTENSION)) {
+                failedOps.add(sourceFile);
+                return;
+            }
+
+            BufferedInputStream inputStream =
+                    new BufferedInputStream(
+                            sourceFile.getInputStream(context), GenericCopyUtil.DEFAULT_BUFFER_SIZE);
+
+            // succeed #CRYPT_EXTENSION at end of directory/file name
+            HybridFile targetFile =
+                    new HybridFile(
+                            targetDirectory.getMode(),
+                            targetDirectory.getPath(),
+                            targetFilename,
+                            sourceFile.isDirectory());
+
+            progressHandler.setFileName(sourceFile.getName(context));
+
+            BufferedOutputStream outputStream =
+                    new BufferedOutputStream(
+                            targetFile.getOutputStream(context), GenericCopyUtil.DEFAULT_BUFFER_SIZE);
+
+            if (useAesCrypt) {
+                new AESCrypt(password)
+                        .encrypt(
+                                AESCrypt.AESCRYPT_SPEC_VERSION,
+                                sourceFile.getInputStream(AppConfig.getInstance()),
+                                targetFile.getOutputStream(AppConfig.getInstance()),
+                                progressHandler);
+            } else {
+                doEncrypt(inputStream, outputStream, Cipher.ENCRYPT_MODE);
+            }
+        }
+    }
+
+    /**
+     * Core encryption/decryption routine.
+     *
+     * @param inputStream   stream associated with the file to be encrypted
+     * @param outputStream  stream associated with new output encrypted file
+     * @param operationMode either <code>Cipher.ENCRYPT_MODE</code> or <code>Cipher.DECRYPT_MODE
+     *                      </code>
+     */
+    private void doEncrypt(
+            BufferedInputStream inputStream, BufferedOutputStream outputStream, int operationMode)
+            throws GeneralSecurityException, IOException {
+
+        Cipher cipher = Cipher.getInstance(ALGO_AES);
+        AlgorithmParameterSpec parameterSpec;
+        if (SDK_INT >= KITKAT) {
+            parameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, IV.getBytes());
+        } else {
+            parameterSpec = new IvParameterSpec(IV.getBytes());
+        }
+
+        Key secretKey = SecretKeygen.getSecretKey();
+        if (secretKey == null) {
+            // Discard crypto setup objects and just pipe input to output
+            parameterSpec = null;
+            cipher = null;
+            ByteStreamsKt.copyTo(inputStream, outputStream, ConstantsKt.DEFAULT_BUFFER_SIZE);
+            inputStream.close();
+            outputStream.close();
+        } else {
+            cipher.init(operationMode, SecretKeygen.getSecretKey(), parameterSpec);
+
+            byte[] buffer = new byte[GenericCopyUtil.DEFAULT_BUFFER_SIZE];
+            int count;
+
+            CipherOutputStream cipherOutputStream = new CipherOutputStream(outputStream, cipher);
+
+            try {
+                while ((count = inputStream.read(buffer)) != -1) {
+                    if (!progressHandler.getCancelled()) {
+                        cipherOutputStream.write(buffer, 0, count);
+                        ServiceWatcherUtil.position += count;
+                    } else break;
+                }
+            } catch (Exception x) {
+                LOG.error("I/O error writing output", x);
+            } finally {
+                cipherOutputStream.flush();
+                cipherOutputStream.close();
+                inputStream.close();
+                outputStream.close();
+            }
+        }
+    }
+
+    /**
+     * Method initializes a Cipher to be used by {@link
+     * android.hardware.fingerprint.FingerprintManager}
+     */
+    public static Cipher initCipher() throws GeneralSecurityException {
+        Cipher cipher = null;
+        if (SDK_INT >= KITKAT) {
+            cipher = Cipher.getInstance(ALGO_AES);
+            GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, IV.getBytes());
+            cipher.init(Cipher.ENCRYPT_MODE, SecretKeygen.getSecretKey(), gcmParameterSpec);
+        } else if (SDK_INT >= JELLY_BEAN_MR2) {
+            cipher = Cipher.getInstance(ALGO_AES);
+            cipher.init(Cipher.ENCRYPT_MODE, SecretKeygen.getSecretKey());
+        }
+        return cipher;
+    }
 }

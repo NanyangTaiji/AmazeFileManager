@@ -83,7 +83,7 @@ public class EncryptDecryptUtils {
     // EncryptService.TAG_ENCRYPT_TARGET already has the .aze extension, no need to append again
     if (!intent.getBooleanExtra(TAG_AESCRYPT, false)) {
       EncryptedEntry encryptedEntry = new EncryptedEntry(destPath, password);
-      CryptHandler.INSTANCE.addEntry(encryptedEntry);
+      CryptHandler.addEntry(encryptedEntry);
     }
     // start the encryption process
     ServiceWatcherUtil.runService(c, intent);
@@ -192,7 +192,7 @@ public class EncryptDecryptUtils {
                 mainActivity,
                 decryptIntent,
                 utilsProvider.getAppTheme(),
-                PasswordUtil.INSTANCE.decryptPassword(
+                PasswordUtil.decryptPassword(
                     c,
                     preferences1.getString(
                         PreferencesConstants.PREFERENCE_CRYPT_MASTER_PASSWORD,
@@ -230,7 +230,7 @@ public class EncryptDecryptUtils {
   private static EncryptedEntry findEncryptedEntry(String path)
       throws GeneralSecurityException, IOException {
 
-    CryptHandler handler = CryptHandler.INSTANCE;
+    CryptHandler handler = CryptHandler.getInstance();
 
     EncryptedEntry matchedEntry = null;
     // find closest path which matches with database entry

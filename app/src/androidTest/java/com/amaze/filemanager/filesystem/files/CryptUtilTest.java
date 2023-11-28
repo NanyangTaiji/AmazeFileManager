@@ -53,8 +53,8 @@ public class CryptUtilTest {
   @Test
   public void testEncryptDecrypt() throws Exception {
     String password = "hackme";
-    String encrypted = PasswordUtil.INSTANCE.encryptPassword(context, password, Base64.URL_SAFE);
+    String encrypted = PasswordUtil.encryptPassword(context, password, Base64.URL_SAFE);
     assertEquals(
-        password, PasswordUtil.INSTANCE.decryptPassword(context, encrypted, Base64.URL_SAFE));
+        password, PasswordUtil.decryptPassword(context, encrypted, Base64.URL_SAFE));
   }
 }
